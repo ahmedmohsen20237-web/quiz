@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منصة الوسام التعليمية</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Firebase Compat SDKs (Auth + Database) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============================================================
+     LOADING SCREEN
+============================================================ -->
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-content">
+    <div class="loading-logo">🏆</div>
+    <div class="loading-title">منصة الوسام التعليمية</div>
+    <div class="loading-bar"><div class="loading-fill"></div></div>
+    <p class="loading-sub">جارٍ تحميل الاختبارات...</p>
+  </div>
+</div>
+
+<!-- Admin Mode Bar -->
+<div class="admin-mode-bar" id="admin-mode-bar">
+  <i class="fa-solid fa-unlock-keyhole" style="margin-left:6px"></i>
+  وضع الأدمن مفعّل
+  <span id="admin-user-email" style="opacity:.6;font-size:0.75rem;margin-right:8px"></span>
+</div>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">🏆</div>
+    <span class="logo-text">منصة الوسام التعليمية</span>
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn ghost" onclick="showPage('home')">
+      <i class="fa-solid fa-house" style="font-size:.8rem;margin-left:4px"></i>
+      <span>الرئيسية</span>
+    </button>
+    <button class="nav-btn ghost" onclick="showPage('tools')">
+      <i class="fa-solid fa-toolbox" style="font-size:.8rem;margin-left:4px"></i>
+      <span>الأدوات</span>
+    </button>
+    <button class="nav-btn ghost" onclick="showPage('errors')">
+      <i class="fa-solid fa-folder-open" style="font-size:.8rem;margin-left:4px"></i>
+      <span>أخطائي</span>
+    </button>
+    <!-- Admin panel button — visible only when authenticated -->
+    <button class="nav-btn gold" id="nav-admin-btn" style="display:none" onclick="showPage('admin')">
+      <i class="fa-solid fa-gear" style="font-size:.8rem;margin-left:4px"></i>
+      <span>إضافة</span>
+    </button>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="تبديل المظهر">
+      <i class="fa-solid fa-sun" id="theme-icon"></i>
+    </button>
+    <button class="admin-login-btn" id="admin-login-btn" onclick="handleAdminLogin()" title="دخول الأدمن">
+      <i class="fa-solid fa-lock" id="admin-lock-icon"></i>
+    </button>
+  </nav>
+</header>
+
+<!-- ============================================================
+     HOME PAGE
+============================================================ -->
+<div id="page-home" class="page active">
+  <div class="home-hero">
+    <div class="hero-badge">
+      <i class="fa-solid fa-star"></i>
+      منصة الوسام التعليمية
+    </div>
+    <h1 class="hero-title">اختبر نفسك وتميّز</h1>
+    <p class="hero-sub">تابع تقدمك، حدد هدفك، وراجع أخطاءك بسهولة</p>
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-lbl">اختبار</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">مكتمل</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-avg">—</div><div class="stat-lbl">متوسط الدرجات</div></div>
+      <div class="stat-card"><div class="stat-val" id="stat-errors">0</div><div class="stat-lbl">خطأ مسجّل</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🍅 مؤقت بومودورو</div>
+    <div class="pomodoro-card">
+      <div class="pomo-ring" id="pomo-ring-wrap">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle class="pomo-ring-bg" cx="36" cy="36" r="30"/>
+          <circle class="pomo-ring-fill focus-ring" id="pomo-ring-fill" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="0"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <span id="pomo-sessions-inner" style="font-size:0.74rem;font-weight:700;color:var(--text3)">1/4</span>
+        </div>
+      </div>
+      <div class="pomo-display">
+        <div class="pomo-time focus" id="pomo-display">25:00</div>
+        <div class="pomo-label focus" id="pomo-label">تركيز</div>
+      </div>
+      <div class="pomo-info">
+        <h4>مؤقت بومودورو</h4>
+        <p id="pomo-status-text">ابدأ جلسة دراسة منتجة</p>
+        <div class="pomo-sessions" id="pomo-dots"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <div class="pomo-controls">
+          <button class="btn btn-primary" id="pomo-start-btn" onclick="togglePomodoro()" style="padding:9px 18px;font-size:0.85rem">▶ ابدأ</button>
+          <button class="btn btn-secondary" onclick="resetPomodoro()" style="padding:9px 12px;font-size:0.85rem">↺</button>
+          <button class="btn btn-secondary" onclick="skipPomoPhase()" style="padding:9px 12px;font-size:0.85rem" title="تخطي المرحلة">⏭</button>
+        </div>
+        <div class="pomo-settings-row">
+          <div class="pomo-input-group"><span style="font-size:0.75rem;color:var(--text3)">تركيز (د)</span><input type="number" id="pomo-focus-input" value="25" min="1" max="60" onchange="updatePomoSettings()"></div>
+          <div class="pomo-input-group"><span style="font-size:0.75rem;color:var(--text3)">استراحة (د)</span><input type="number" id="pomo-break-input" value="5" min="1" max="30" onchange="updatePomoSettings()"></div>
+          <div class="pomo-input-group"><span style="font-size:0.75rem;color:var(--text3)">جلسات</span><input type="number" id="pomo-sessions-input" value="4" min="1" max="8" onchange="updatePomoSettings()"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🎯 هدفك</div>
+    <div class="goal-card">
+      <div class="goal-icon">🏆</div>
+      <div class="goal-info"><h3 id="goal-title">حدد هدفك</h3><p id="goal-desc">اضغط تعديل لتحديد هدفك من الاختبارات</p></div>
+      <div class="goal-progress-wrap">
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="goal-bar" style="width:0%"></div></div>
+        <div class="progress-labels"><span id="goal-done-lbl">0 مكتمل</span><span id="goal-target-lbl">الهدف: —</span></div>
+      </div>
+      <button class="goal-edit-btn" onclick="openGoalModal()">✏️ تعديل</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 الاختبارات</div>
+    <div class="tests-grid" id="tests-grid"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TOOLS PAGE
+============================================================ -->
+<div id="page-tools" class="page">
+  <div style="max-width:900px;margin:0 auto;padding:26px 20px;">
+    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">🛠️ الأدوات</h2>
+    <p style="color:var(--text2);font-size:0.88rem;margin-bottom:24px">مؤقتات وأدوات مساعدة لتنظيم وقت الدراسة وتحديد الأهداف</p>
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="tool-card-header"><div class="tool-icon blue">⏱️</div><div><h4>مؤقت العد التنازلي</h4><p>حدد مدة واضغط ابدأ</p></div></div>
+        <div class="tool-body">
+          <div class="tool-row"><label>المدة</label><input class="tool-input" id="cd-mins" type="number" value="5" min="0" max="999" placeholder="دقائق"><span class="tool-unit">د</span><input class="tool-input" id="cd-secs" type="number" value="0" min="0" max="59" placeholder="ثواني"><span class="tool-unit">ث</span></div>
+          <div class="tool-display"><div class="tool-timer-val" id="cd-display">05:00</div><div class="tool-timer-lbl" id="cd-label">جاهز للبدء</div></div>
+          <div class="tool-row" style="justify-content:center;gap:8px">
+            <button class="btn btn-primary" id="cd-start-btn" onclick="toggleCountdown()" style="padding:9px 20px;font-size:0.85rem">▶ ابدأ</button>
+            <button class="btn btn-secondary" onclick="resetCountdown()" style="padding:9px 14px;font-size:0.85rem">↺ إعادة</button>
+          </div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-card-header"><div class="tool-icon green">🕐</div><div><h4>ساعة إيقاف</h4><p>قِس الوقت المستغرق</p></div></div>
+        <div class="tool-body">
+          <div class="tool-display"><div class="tool-timer-val" id="sw-display">00:00</div><div class="tool-timer-lbl" id="sw-label">متوقفة</div></div>
+          <div id="sw-laps" style="max-height:100px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+          <div class="tool-row" style="justify-content:center;gap:8px">
+            <button class="btn btn-primary" id="sw-start-btn" onclick="toggleStopwatch()" style="padding:9px 20px;font-size:0.85rem">▶ ابدأ</button>
+            <button class="btn btn-secondary" onclick="lapStopwatch()" id="sw-lap-btn" disabled style="padding:9px 14px;font-size:0.85rem">🏁 سجّل</button>
+            <button class="btn btn-secondary" onclick="resetStopwatch()" style="padding:9px 14px;font-size:0.85rem">↺</button>
+          </div>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-card-header"><div class="tool-icon gold">🎯</div><div><h4>متتبع الهدف</h4><p>ضع هدفاً وراقب تقدمك</p></div></div>
+        <div class="tool-body">
+          <div class="tool-row"><label>اسم الهدف</label><input class="tool-input" id="tool-goal-name" placeholder="مثال: حل 20 سؤالاً" style="text-align:right;flex:2"></div>
+          <div class="tool-row"><label>الهدف</label><input class="tool-input" id="tool-goal-target" type="number" value="20" min="1"><span class="tool-unit">وحدة</span></div>
+          <div class="tool-row"><label>المنجز حالياً</label><input class="tool-input" id="tool-goal-done" type="number" value="0" min="0" oninput="updateToolGoal()"><button class="btn btn-secondary" onclick="incrementGoalDone()" style="padding:7px 12px;font-size:0.88rem">+1</button></div>
+          <div class="tool-display tool-goal-progress">
+            <div class="tool-goal-val" id="tool-goal-pct">0%</div>
+            <div class="progress-bar-bg" style="margin:6px 0 4px"><div class="progress-bar-fill" id="tool-goal-bar" style="width:0%"></div></div>
+            <div class="tool-goal-sub" id="tool-goal-sub">0 من 20</div>
+          </div>
+          <button class="btn btn-primary" onclick="saveToolGoal()" style="width:100%;font-size:0.85rem;padding:9px">💾 حفظ الهدف</button>
+        </div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-card-header"><div class="tool-icon blue">❓</div><div><h4>مؤقت لكل سؤال</h4><p>حدد وقت للإجابة على كل سؤال</p></div></div>
+        <div class="tool-body">
+          <div class="tool-row"><label>وقت السؤال</label><input class="tool-input" id="qt-secs" type="number" value="30" min="5" max="300"><span class="tool-unit">ثانية</span></div>
+          <div class="tool-row"><label>عدد الأسئلة</label><input class="tool-input" id="qt-count" type="number" value="10" min="1" max="200"></div>
+          <div class="tool-display">
+            <div class="tool-timer-val" id="qt-display">00:30</div>
+            <div class="tool-timer-lbl" id="qt-label">جاهز</div>
+            <div class="progress-bar-bg" style="margin-top:8px"><div class="progress-bar-fill" id="qt-bar" style="width:100%"></div></div>
+          </div>
+          <div class="tool-row" style="justify-content:center;gap:8px">
+            <button class="btn btn-primary" id="qt-start-btn" onclick="toggleQTimer()" style="padding:9px 20px;font-size:0.85rem">▶ ابدأ</button>
+            <button class="btn btn-secondary" onclick="nextQTimer()" id="qt-next-btn" disabled style="padding:9px 14px;font-size:0.85rem">التالي ➡️</button>
+            <button class="btn btn-secondary" onclick="resetQTimer()" style="padding:9px 14px;font-size:0.85rem">↺</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ERRORS PAGE
+============================================================ -->
+<div id="page-errors" class="page">
+  <div style="max-width:900px;margin:0 auto;padding:26px 20px;">
+    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">🗂️ مجلد الأخطاء</h2>
+    <p style="color:var(--text2);font-size:0.88rem;margin-bottom:24px">الأسئلة التي أخطأت فيها — مرتبة حسب الصعوبة</p>
+
+    <div id="practice-panel" style="display:none;margin-bottom:20px;">
+      <div style="background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--glass-border);border-radius:var(--radius);padding:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div style="font-weight:700;font-family:'Cairo',sans-serif;font-size:0.95rem">🔁 جلسات التدريب على الأخطاء</div>
+            <div style="font-size:0.78rem;color:var(--text3);margin-top:2px" id="practice-splits-info"></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text2)">
+              عدد الأسئلة/جلسة:
+              <input type="number" id="practice-size" value="10" min="1" max="50" onchange="renderErrors()"
+                style="width:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:5px;text-align:center;font-family:'Cairo',sans-serif;">
+            </div>
+            <button class="btn btn-primary" onclick="startPracticeSession()" style="font-size:0.82rem;padding:9px 16px">▶ تدريب بالجلسات</button>
+            <button class="btn btn-secondary" onclick="startPracticeSession(true)" style="font-size:0.82rem;padding:9px 16px">📋 كل الأخطاء</button>
+            <button class="btn btn-secondary" onclick="clearErrors()" style="font-size:0.82rem;padding:9px 16px;color:var(--red)">🗑️ مسح الكل</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="errors-container"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     QUIZ PAGE
+============================================================ -->
+<div id="page-quiz" class="page">
+  <div class="quiz-page">
+    <div class="quiz-header">
+      <button class="quiz-exit-btn" onclick="confirmLeaveQuiz()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <div class="quiz-title-wrap">
+        <div class="quiz-title" id="quiz-title"></div>
+        <div class="quiz-subtitle" id="quiz-subtitle"></div>
+      </div>
+      <div class="timer-pill" id="timer-pill">⏱️ <span>00:00</span></div>
+    </div>
+    <div class="quiz-progress-row">
+      <div class="q-progress-bar"><div class="q-progress-fill" id="q-progress-fill" style="width:0%"></div></div>
+      <div class="q-counter" id="q-counter">0 / 0</div>
+    </div>
+    <div class="question-card" id="question-card">
+      <div class="q-num" id="q-num"></div>
+      <div class="q-text" id="q-text"></div>
+      <!-- multi-answer-note is intentionally always hidden from student — do not remove element -->
+      <div class="multi-answer-note" id="multi-answer-note" style="display:none!important"></div>
+      <div class="choices" id="choices-container"></div>
+      <!-- submit-multi is intentionally always hidden from student — do not remove element -->
+      <button class="quiz-submit-multi" id="quiz-submit-multi" style="display:none!important" onclick="submitMultiAnswer()">✅ تأكيد</button>
+      <div class="teacher-note-box" id="teacher-note-box">
+        <strong>💡 ملاحظة المعلم:</strong>
+        <span id="teacher-note-text"></span>
+      </div>
+    </div>
+    <div class="quiz-actions">
+      <button class="btn btn-secondary" id="skip-btn" onclick="skipQuestion()">تخطي ⏭️</button>
+      <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" disabled>التالي ←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     RESULTS PAGE
+============================================================ -->
+<div id="page-results" class="page">
+  <div class="results-page">
+    <div class="results-hero">
+      <span class="results-icon" id="results-icon">🏆</span>
+      <div class="results-score" id="results-score">0%</div>
+      <div class="results-label" id="results-label"></div>
+      <div class="results-grade" id="results-grade"></div>
+    </div>
+    <div class="score-circle-wrap">
+      <div class="score-circle">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle class="score-arc-bg" cx="60" cy="60" r="52"/>
+          <circle class="score-arc" id="score-arc" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+        </svg>
+        <div class="score-inner"><div class="pct" id="score-pct">0%</div><div class="lbl">النتيجة</div></div>
+      </div>
+    </div>
+    <div class="results-stats">
+      <div class="r-stat"><div class="r-stat-val green" id="r-correct">0</div><div class="r-stat-lbl">✅ صحيح</div></div>
+      <div class="r-stat"><div class="r-stat-val red" id="r-wrong">0</div><div class="r-stat-lbl">❌ خطأ</div></div>
+      <div class="r-stat"><div class="r-stat-val gold" id="r-skipped">0</div><div class="r-stat-lbl">⏭️ تخطي</div></div>
+      <div class="r-stat"><div class="r-stat-val blue" id="r-time">—</div><div class="r-stat-lbl">⏱️ الوقت</div></div>
+    </div>
+    <div class="section-title" style="margin-bottom:12px;font-size:0.9rem">🔢 توزيع الإجابات</div>
+    <div class="breakdown-grid" id="breakdown-grid"></div>
+    <div class="results-actions">
+      <button class="btn btn-primary" onclick="retryQuiz()">🔄 إعادة المحاولة</button>
+      <button class="btn btn-secondary" onclick="showPage('errors')">🗂️ الأخطاء</button>
+      <button class="btn btn-secondary" onclick="showPage('home')">🏠 الرئيسية</button>
+    </div>
+    <div class="section-title" style="margin-bottom:14px;font-size:0.9rem">📝 مراجعة الإجابات</div>
+    <div class="review-list" id="review-list"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ADMIN PAGE (Auth-protected — Firebase Auth required)
+============================================================ -->
+<div id="page-admin" class="page">
+  <div class="admin-page">
+    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">⚙️ لوحة إدارة الاختبارات</h2>
+    <p style="color:var(--accent);font-size:0.82rem;margin-bottom:18px">
+      <i class="fa-solid fa-unlock-keyhole" style="margin-left:5px"></i>وضع الأدمن مفعّل
+    </p>
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('add',event)">➕ إضافة اختبار</button>
+      <button class="admin-tab" onclick="switchAdminTab('parse',event)">🤖 استيراد ذكي</button>
+      <button class="admin-tab" onclick="switchAdminTab('manage',event)">📋 إدارة الاختبارات</button>
+      <button class="admin-tab" onclick="switchAdminTab('settings',event)">⚙️ إعدادات</button>
+    </div>
+
+    <!-- ADD TAB -->
+    <div id="admin-add" class="admin-tab-content active">
+      <div class="form-group">
+        <label class="form-label">اسم الاختبار *</label>
+        <input class="form-input" id="new-test-name" placeholder="مثال: الزلازل والسكري" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">المادة / الموضوع</label>
+          <input class="form-input" id="new-test-subject" placeholder="مثال: العلوم" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">⏱️ وقت الاختبار (بالدقائق) — 0 = بدون حد</label>
+          <input class="form-input" id="new-test-time" type="number" min="0" value="10" />
+        </div>
+      </div>
+      <div class="section-title" style="margin-bottom:10px;font-size:0.88rem">الأسئلة</div>
+      <div class="questions-builder" id="questions-builder"></div>
+      <button class="btn btn-secondary" onclick="addQuestionBuilder()" style="margin-bottom:18px;width:100%">
+        ➕ إضافة سؤال يدوياً
+      </button>
+      <div class="answer-map-section" id="answer-map-section" style="display:none">
+        <h4>✅ تحديد الإجابات الصحيحة</h4>
+        <p>بدلاً من اختيار كل إجابة يدوياً في كل سؤال، يمكنك تحديد الإجابات الصحيحة هنا دفعةً واحدة.</p>
+        <div class="answer-map-grid" id="answer-map-grid"></div>
+      </div>
+      <button class="btn btn-primary" id="save-test-btn" onclick="saveTest()" style="width:100%">💾 حفظ الاختبار</button>
+    </div>
+
+    <!-- PARSE TAB -->
+    <div id="admin-parse" class="admin-tab-content">
+      <div style="background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.18);border-radius:11px;padding:14px;margin-bottom:18px;">
+        <p style="font-size:0.84rem;color:var(--text2);line-height:1.7">
+          📋 <strong style="color:var(--accent)">الاستيراد الذكي:</strong>
+          الصق نصاً يحتوي على أسئلة وخيارات وسيتم تحليله تلقائياً.
+          يدعم: <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;font-size:0.8rem">س: / Q:</code>
+          للسؤال و <code style="background:var(--surface3);padding:2px 6px;border-radius:4px;font-size:0.8rem">أ/ ب/ أو A) B)</code> للخيارات.
+        </p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">اسم الاختبار *</label>
+        <input class="form-input" id="parse-test-name" placeholder="مثال: درس الجملة الاسمية" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">المادة</label>
+          <input class="form-input" id="parse-test-subject" placeholder="مثال: اللغة العربية" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">⏱️ وقت الاختبار (دقائق)</label>
+          <input class="form-input" id="parse-test-time" type="number" min="0" value="10" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📝 الصق نص الأسئلة هنا</label>
+        <textarea class="form-input parse-textarea" id="parse-input" rows="8"
+          placeholder="مثال:&#10;س1: ما هو أكبر كوكب في المجموعة الشمسية؟&#10;أ) الأرض&#10;ب) المريخ&#10;ج) المشتري&#10;د) زحل"></textarea>
+      </div>
+      <div class="answer-bulk">
+        <label>✍️ الإجابات الصحيحة (اختياري) — أدخلها مفصولة بمسافة أو فاصلة:</label>
+        <textarea id="bulk-answers-input" rows="2"
+          placeholder="مثال: ج ب أ د   أو   C B A D   أو   3 2 1 4   (يدعم المسافة والفاصلة)"></textarea>
+        <small>مثال: إذا الأول جوابه "ج" والثاني "ب": اكتب ج ب   أو   C B   أو   3 2</small>
+      </div>
+      <button class="btn btn-primary" onclick="parseQuestions()" style="width:100%;margin-bottom:14px">
+        🔍 تحليل النص
+      </button>
+      <div class="parse-result-preview" id="parse-preview">
+        <h4 id="parse-preview-title">✅ تم التحليل — حدد الإجابات الصحيحة</h4>
+        <div id="parse-questions-list"></div>
+        <button class="btn btn-primary" id="save-parsed-btn" onclick="saveParsedTest()" style="width:100%;margin-top:14px">
+          💾 حفظ الاختبار
+        </button>
+      </div>
+    </div>
+
+    <!-- MANAGE TAB -->
+    <div id="admin-manage" class="admin-tab-content">
+      <div id="manage-list"></div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="admin-settings" class="admin-tab-content">
+      <div class="settings-card">
+        <h3>🗂️ إعدادات تتبع الأخطاء</h3>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <h4>تتبع الأخطاء حسب اسم الاختبار</h4>
+            <p>تفعيل تتبع الأخطاء حسب الاختبار — يتيح إعادة التدريب على أخطاء اختبار محدد</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-categorized-errors" onchange="saveAdminSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <h4>عرض ملاحظات المعلم فور الإجابة</h4>
+            <p>إظهار ملاحظات المعلم مباشرةً بعد إجابة الطالب على كل سؤال</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-show-notes-live" checked onchange="saveAdminSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="settings-card" style="border-color:rgba(239,68,68,0.2)">
+        <h3 style="color:var(--red)">🔒 الأمان — Firebase Authentication</h3>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <h4>الجلسة الحالية</h4>
+            <p id="admin-user-email-settings">—</p>
+          </div>
+          <button class="btn btn-secondary" onclick="logoutAdmin()" style="font-size:0.83rem;color:var(--red)">
+            تسجيل الخروج 🔒
+          </button>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <h4>📋 قواعد Firebase المطلوبة</h4>
+            <p>انسخ هذه القواعد إلى Firebase Console ← Realtime Database ← Rules</p>
+          </div>
+        </div>
+        <div style="background:var(--surface2);border-radius:9px;padding:14px;font-size:0.75rem;font-family:monospace;color:var(--green);line-height:1.8;white-space:pre-wrap;overflow-x:auto">{
+  "rules": {
+    "quizzes": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "analytics": {
+      ".read": "auth != null",
+      ".write": true
+    }
+  }
+}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     FOOTER
+============================================================ -->
+<footer class="site-footer">
+  جميع الحقوق محفوظة
+  <span class="footer-sep">|</span>
+  تطوير تقني: أحمد محسن
+  <span class="footer-sep">|</span>
+  <span style="color:var(--green);font-size:0.72rem">🔒 محمي بـ Firebase Authentication</span>
+</footer>
+
+<!-- ============================================================
+     MODALS
+============================================================ -->
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal">
+    <h3>🎯 تحديد الهدف</h3>
+    <div class="form-group">
+      <label class="form-label">اسم الهدف</label>
+      <input class="form-input" id="goal-name-input" placeholder="مثال: أكمل جميع الاختبارات هذا الأسبوع" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">عدد الاختبارات المستهدفة</label>
+      <input class="form-input" id="goal-target-input" type="number" min="1" placeholder="مثال: 20" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('goal-modal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveGoal()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leave-modal">
+  <div class="modal">
+    <h3>⚠️ هل تريد المغادرة؟</h3>
+    <p style="color:var(--text2);font-size:0.9rem">سيتم حفظ تقدمك — يمكنك الاستمرار لاحقاً.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('leave-modal')">تراجع</button>
+      <button class="btn btn-primary" onclick="leaveQuiz()">مغادرة</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>🗑️ تأكيد الحذف</h3>
+    <div class="delete-warning">
+      <strong id="delete-modal-name">اسم الاختبار</strong>
+      سيتم حذف هذا الاختبار وجميع درجاته نهائياً ولا يمكن التراجع.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('delete-modal')">إلغاء</button>
+      <button class="btn" onclick="confirmDeleteTest()"
+        style="background:var(--red);color:#fff;padding:11px 22px;border-radius:11px;font-family:'Cairo',sans-serif;font-weight:700;border:none;cursor:pointer;">
+        حذف نهائياً
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="practice-modal">
+  <div class="modal modal-wide">
+    <h3>🔁 جلسات التدريب على الأخطاء</h3>
+    <p style="color:var(--text3);font-size:0.85rem;margin-bottom:16px" id="practice-modal-desc"></p>
+    <div id="practice-sessions-list" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('practice-modal')">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ADMIN LOGIN MODAL — Firebase Authentication
+     NO PASSWORDS IN CODE. Credentials verified server-side.
+============================================================ -->
+<div class="modal-overlay" id="admin-login-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="admin-modal-content">
+      <div class="admin-modal-icon"><i class="fa-solid fa-lock" style="color:var(--accent)"></i></div>
+      <h3 style="margin-bottom:8px">دخول الأدمن</h3>
+      <p style="font-size:0.83rem;color:var(--text3);margin-bottom:18px">
+        تسجيل الدخول عبر Firebase Authentication
+      </p>
+      <div class="form-group">
+        <input type="email" class="form-input" id="admin-email-input"
+          placeholder="البريد الإلكتروني"
+          style="text-align:right;margin-bottom:10px"
+          autocomplete="email">
+      </div>
+      <div class="form-group">
+        <input type="password" class="form-input admin-modal-input" id="admin-password-input"
+          placeholder="كلمة المرور"
+          autocomplete="current-password">
+      </div>
+      <div id="admin-login-error"
+        style="color:var(--red);font-size:0.82rem;display:none;margin-top:8px;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;border:1px solid rgba(239,68,68,0.2)">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('admin-login-modal')">إلغاء</button>
+      <button class="btn btn-primary" id="admin-login-submit-btn" onclick="verifyAdminLogin()">دخول</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============================================================
+     SCRIPTS — Loaded in dependency order
+============================================================ -->
+<script src="js/firebase.js"></script>
+<script src="js/app.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/quiz.js"></script>
+
+</body>
+</html>
