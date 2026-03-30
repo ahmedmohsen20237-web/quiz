@@ -179,7 +179,7 @@ async function dbSaveAnalytics(quizId, data) {
     console.warn('Analytics save failed:', err);
   }
 }
--e 
+ 
 
 /* ================================================================
    MODULE 2: app.js — State, Navigation, Utilities, Theme
