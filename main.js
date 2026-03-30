@@ -179,7 +179,7 @@ async function dbSaveAnalytics(quizId, data) {
     console.warn('Analytics save failed:', err);
   }
 }
-
+-e 
 
 /* ================================================================
    MODULE 2: app.js — State, Navigation, Utilities, Theme
@@ -204,6 +204,7 @@ const AppState = {
   currentTest:    null,
   currentQ:       0,
   userAnswers:    [],
+  answers:        [],   // navigation answer store — mirrors userAnswers
   answered:       false,
   timerInterval:  null,
   elapsedSecs:    0,
@@ -740,6 +741,7 @@ function renderManageList() {
       </div>
       <div class="manage-item-actions">
         <button onclick="startQuiz('${t.firebaseId}')" class="btn btn-primary" style="font-size:0.8rem;padding:8px 12px">▶️ تشغيل</button>
+        <button onclick="loadQuizForEdit('${t.firebaseId}')" class="btn btn-secondary" style="font-size:0.8rem;padding:8px 12px;color:var(--accent)">✏️ تعديل</button>
         <button onclick="requestDeleteTest('${t.firebaseId}')" class="btn btn-secondary" style="font-size:0.8rem;padding:8px 12px;color:var(--red)">🗑️ حذف</button>
       </div>
     `;
@@ -1153,6 +1155,128 @@ async function saveParsedTest() {
     if (btn) { btn.disabled = false; btn.textContent = '💾 حفظ الاختبار'; }
   }
 }
+
+/* ============================================================
+   ADMIN EDIT FEATURE — loadQuizForEdit / updateQuiz
+============================================================ */
+
+/**
+ * Fetch quiz data from Firebase and populate the builder form for editing.
+ * @param {string} quizId - Firebase quiz ID
+ */
+async function loadQuizForEdit(quizId) {
+  if (!isAdminMode) { showToast('يجب تسجيل الدخول كأدمن', 'error'); return; }
+  if (!quizId) { console.error('loadQuizForEdit: quizId is required'); return; }
+
+  try {
+    const snapshot = await db.ref('quizzes/' + quizId).once('value');
+    const data     = snapshot.val();
+
+    if (!data) {
+      showToast('لم يتم العثور على بيانات الاختبار', 'error');
+      console.error('loadQuizForEdit: null data for quizId', quizId);
+      return;
+    }
+
+    // Switch to the Add tab and fill the form
+    // Activate the "add" tab button and content correctly
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+    const addTabBtn = document.querySelector('.admin-tab[onclick*="add"]');
+    if (addTabBtn) addTabBtn.classList.add('active');
+    document.getElementById('admin-add')?.classList.add('active');
+
+    safeSetValue('new-test-name',    data.name    || '');
+    safeSetValue('new-test-subject', data.subject || '');
+    safeSetValue('new-test-time',    data.timeLimit != null ? data.timeLimit : 10);
+
+    // Load questions into builder
+    AppState.builderQuestions = (data.questions || []).map(q => ({
+      text:           q.text           || '',
+      choices:        Array.isArray(q.choices) ? [...q.choices] : ['', '', '', ''],
+      correct:        typeof q.correct === 'number' ? q.correct : 0,
+      correctAnswers: Array.isArray(q.correctAnswers) && q.correctAnswers.length
+                        ? [...q.correctAnswers]
+                        : [typeof q.correct === 'number' ? q.correct : 0],
+      multiCorrect:   q.multiCorrect || false,
+      note:           q.note          || ''
+    }));
+
+    renderBuilder();
+
+    // Replace save button to trigger updateQuiz instead of saveTest
+    const saveBtn = document.getElementById('save-test-btn');
+    if (saveBtn) {
+      saveBtn.textContent = '💾 تحديث الاختبار';
+      saveBtn.onclick     = () => updateQuiz(quizId);
+    }
+
+    showPage('admin');
+    showToast('تم تحميل الاختبار للتعديل ✓', 'info');
+  } catch (err) {
+    console.error('loadQuizForEdit error:', err);
+    showToast('فشل تحميل الاختبار: ' + (err.message || 'خطأ غير معروف'), 'error');
+  }
+}
+
+/**
+ * Update an existing quiz in Firebase using update() — does NOT create a new record.
+ * @param {string} quizId - Firebase quiz ID to update
+ */
+async function updateQuiz(quizId) {
+  if (!isAdminMode) { showToast('يجب تسجيل الدخول كأدمن', 'error'); return; }
+  if (!quizId)      { console.error('updateQuiz: quizId is required'); return; }
+
+  const name = document.getElementById('new-test-name')?.value.trim();
+  if (!name) { showToast('أدخل اسم الاختبار', 'error'); return; }
+  if (!AppState.builderQuestions.length) { showToast('أضف سؤالاً على الأقل', 'error'); return; }
+  if (!AppState.builderQuestions.every(q => q.text.trim() && q.choices.every(c => c.trim()))) {
+    showToast('أكمل جميع الأسئلة والخيارات', 'error'); return;
+  }
+
+  const updatedData = {
+    name,
+    subject:   document.getElementById('new-test-subject')?.value.trim() || '',
+    timeLimit: parseInt(document.getElementById('new-test-time')?.value) || 0,
+    questions: AppState.builderQuestions.map(q => ({
+      text:           q.text,
+      choices:        [...q.choices],
+      correctAnswers: q.correctAnswers?.length ? q.correctAnswers : [q.correct],
+      correct:        q.correctAnswers?.length ? q.correctAnswers[0] : q.correct,
+      multiCorrect:   q.multiCorrect || false,
+      note:           q.note || ''
+    })),
+    updatedAt: Date.now()
+  };
+
+  const btn = document.getElementById('save-test-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'جارٍ التحديث...'; }
+
+  try {
+    // Use update() — never push() — to update in-place
+    await db.ref('quizzes/' + quizId).update(updatedData);
+    showToast('تم تحديث الاختبار بنجاح ✓', 'success');
+
+    // Reset form and restore save button
+    safeSetValue('new-test-name',    '');
+    safeSetValue('new-test-subject', '');
+    safeSetValue('new-test-time',    '10');
+    AppState.builderQuestions = [];
+    renderBuilder();
+
+    if (btn) {
+      btn.textContent = '💾 حفظ الاختبار';
+      btn.onclick     = saveTest;
+    }
+
+    setTimeout(() => showPage('home'), 900);
+  } catch (err) {
+    console.error('updateQuiz error:', err);
+    showToast(err.message || 'حدث خطأ أثناء التحديث', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; }
+  }
+}
 -e 
 
 /* ================================================================
@@ -1260,6 +1384,8 @@ function initQuizSession(test) {
   AppState.userAnswers  = new Array(test.questions.length).fill(null);
   AppState.answered     = false;
   AppState.elapsedSecs  = 0;
+  // Navigation answers array (mirrors userAnswers for nav state)
+  AppState.answers      = new Array(test.questions.length).fill(null);
 
   showPage('quiz');
   safeSetText('quiz-title',    test.name);
@@ -1274,6 +1400,8 @@ function resumeQuiz(test, saved) {
   AppState.userAnswers  = saved.answers  || new Array(test.questions.length).fill(null);
   AppState.answered     = AppState.userAnswers[AppState.currentQ] !== null;
   AppState.elapsedSecs  = saved.elapsed  || 0;
+  // Sync answers array with restored userAnswers
+  AppState.answers      = [...AppState.userAnswers];
 
   showPage('quiz');
   safeSetText('quiz-title',    test.name);
@@ -1331,7 +1459,9 @@ function clearProgress(testId) {
 ============================================================ */
 function renderQuestion() {
   const { currentTest, currentQ, userAnswers } = AppState;
-  const q   = currentTest.questions[currentQ];
+  if (!currentTest || !currentTest.questions) { console.error('renderQuestion: currentTest or questions missing'); return; }
+  const q = currentTest.questions[currentQ];
+  if (!q) { console.error('renderQuestion: question at index', currentQ, 'is undefined'); return; }
   const pct = (currentQ / currentTest.questions.length) * 100;
 
   // Progress & header
@@ -1369,14 +1499,27 @@ function renderQuestion() {
   container.innerHTML = '';
   container.appendChild(frag);
 
-  // Next/skip buttons
+  // Legacy next/skip buttons (keep working)
   const nextBtn = document.getElementById('next-btn');
   if (nextBtn) {
     nextBtn.disabled    = true;
     nextBtn.textContent = currentQ === currentTest.questions.length - 1 ? 'إنهاء ✓' : 'التالي ←';
+    nextBtn.style.display = 'none';
   }
   const skipBtn = document.getElementById('skip-btn');
-  if (skipBtn) skipBtn.style.display = '';
+  if (skipBtn) skipBtn.style.display = 'none';
+
+  // New navigation buttons: prevBtn / nextBtn (IDs from HTML)
+  const prevBtnEl = document.getElementById('prevBtn');
+  const nextBtnEl = document.getElementById('nextBtn');
+  if (prevBtnEl) {
+    prevBtnEl.style.display = currentQ === 0 ? 'none' : '';
+  }
+  if (nextBtnEl) {
+    nextBtnEl.style.display = '';
+    nextBtnEl.disabled      = (userAnswers[currentQ] === null || userAnswers[currentQ] === undefined);
+    nextBtnEl.textContent   = currentQ === currentTest.questions.length - 1 ? 'إنهاء ✓' : 'التالي ←';
+  }
 
   AppState.answered = false;
 
@@ -1397,8 +1540,15 @@ function restoreAnswer(answer) {
 
   document.getElementById('choice-' + idx)?.classList.add('selected');
   document.querySelectorAll('.choice').forEach(el => el.classList.add('disabled'));
+
+  // Legacy next-btn
   const nextBtn = document.getElementById('next-btn');
   if (nextBtn) nextBtn.disabled = false;
+
+  // New nextBtn
+  const nextBtnEl = document.getElementById('nextBtn');
+  if (nextBtnEl) nextBtnEl.disabled = false;
+
   const skipBtn = document.getElementById('skip-btn');
   if (skipBtn) skipBtn.style.display = 'none';
   AppState.answered = true;
@@ -1420,11 +1570,19 @@ function selectAnswer(i) {
   if (AppState.answered) return;
   AppState.answered         = true;
   AppState.userAnswers[AppState.currentQ] = i;
+  // Save to answers[] array for navigation state
+  if (!Array.isArray(AppState.answers)) AppState.answers = new Array(AppState.currentTest.questions.length).fill(null);
+  AppState.answers[AppState.currentQ] = i;
 
   // Visual feedback
   document.querySelectorAll('.choice').forEach(el => el.classList.add('disabled'));
   document.getElementById('choice-' + i)?.classList.add('selected');
 
+  // Update nextBtn (new navigation button)
+  const nextBtnEl = document.getElementById('nextBtn');
+  if (nextBtnEl) nextBtnEl.disabled = false;
+
+  // Legacy next-btn
   const nextBtn = document.getElementById('next-btn');
   if (nextBtn) nextBtn.disabled = false;
   const skipBtn = document.getElementById('skip-btn');
@@ -1452,6 +1610,7 @@ function maybeShowTeacherNote(q) {
 ============================================================ */
 function skipQuestion() {
   AppState.userAnswers[AppState.currentQ] = -1;
+  if (Array.isArray(AppState.answers)) AppState.answers[AppState.currentQ] = -1;
   saveProgress();
   nextQuestion();
 }
@@ -1465,6 +1624,38 @@ function nextQuestion() {
   } else {
     finishQuiz();
   }
+}
+
+/* ============================================================
+   MANUAL NAVIGATION — goToNextQuestion / goToPreviousQuestion
+============================================================ */
+function goToNextQuestion() {
+  const { currentQ, currentTest, userAnswers } = AppState;
+  if (!currentTest) { console.error('goToNextQuestion: no active quiz'); return; }
+
+  // Prevent moving forward without an answer
+  if (userAnswers[currentQ] === null || userAnswers[currentQ] === undefined) {
+    showToast('يجب اختيار إجابة أولاً', 'warning');
+    return;
+  }
+
+  if (currentQ < currentTest.questions.length - 1) {
+    AppState.currentQ++;
+    AppState.answered = AppState.userAnswers[AppState.currentQ] !== null &&
+                        AppState.userAnswers[AppState.currentQ] !== undefined;
+    renderQuestion();
+  } else {
+    finishQuiz();
+  }
+}
+
+function goToPreviousQuestion() {
+  const { currentQ } = AppState;
+  if (currentQ <= 0) return;
+  AppState.currentQ--;
+  AppState.answered = AppState.userAnswers[AppState.currentQ] !== null &&
+                      AppState.userAnswers[AppState.currentQ] !== undefined;
+  renderQuestion();
 }
 
 function confirmLeaveQuiz() {
