@@ -397,3 +397,84 @@ textarea.form-input{resize:vertical;min-height:80px}
   .q-nav-strip{gap:4px}
   .q-nav-dot{width:28px;height:28px;font-size:0.7rem}
 }
+
+/* ── Question Image ── */
+.q-image-display {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  margin: 12px 0;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+}
+.q-img-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 12px;
+  flex-wrap: wrap;
+}
+.q-img-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1.5px dashed var(--border2);
+  border-radius: 9px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  font-family: 'Cairo', sans-serif;
+  color: var(--text2);
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+  white-space: nowrap;
+}
+.q-img-upload-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.q-img-hint {
+  font-size: 0.76rem;
+  color: var(--text3);
+}
+.q-image-preview-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+.q-image-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  border: 1.5px solid var(--accent);
+  object-fit: contain;
+  display: block;
+}
+.q-img-remove-btn {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.review-q-image {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 10px;
+  margin: 8px 0;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+}

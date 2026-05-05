@@ -414,7 +414,7 @@ function renderManageList() {
    QUIZ BUILDER (إضافة/تعديل)
 ============================================================ */
 function addQuestionBuilder(data) {
-  AppState.builderQuestions.push(data||{text:'',choices:['','','',''],correct:0,correctAnswers:[0],multiCorrect:false,note:''});
+  AppState.builderQuestions.push(data||{text:'',choices:['','','',''],correct:0,correctAnswers:[0],multiCorrect:false,note:'',image:''});
   renderBuilder();
 }
 function renderBuilderTo(questions, containerId) {
@@ -436,6 +436,15 @@ function renderBuilderTo(questions, containerId) {
           style="flex:1"/>
       </div>`;
     });
+    const imgPreview = q.image
+      ? `<div class="q-image-preview-wrap" id="${containerId}-imgwrap-${qi}">
+           <img src="${q.image}" class="q-image-preview" alt="صورة السؤال"/>
+           <button class="q-img-remove-btn" onclick="removeBuilderImage('${containerId}',${qi})" title="حذف الصورة">✕</button>
+         </div>`
+      : `<div class="q-image-preview-wrap" id="${containerId}-imgwrap-${qi}" style="display:none">
+           <img src="" class="q-image-preview" alt="صورة السؤال"/>
+           <button class="q-img-remove-btn" onclick="removeBuilderImage('${containerId}',${qi})" title="حذف الصورة">✕</button>
+         </div>`;
     item.innerHTML=`
       <div class="q-builder-header">
         <span class="q-builder-num">سؤال ${qi+1} ${isMulti?'<span class="multi-badge">متعدد الإجابات</span>':''}</span>
@@ -446,9 +455,18 @@ function renderBuilderTo(questions, containerId) {
           <button class="q-del-btn" onclick="deleteBuilderQ('${containerId}',${qi})">حذف</button>
         </div>
       </div>
-      <input class="form-input" placeholder="نص السؤال..." value="${escapeHtml(q.text||'')}"
+      <input class="form-input" placeholder="نص السؤال (اختياري إذا أضفت صورة)..." value="${escapeHtml(q.text||'')}"
         oninput="getBuilderQuestions('${containerId}')[${qi}].text=this.value;updateAnswerMapIfExists()"
         style="margin-bottom:9px"/>
+      ${imgPreview}
+      <div class="q-img-upload-row">
+        <label class="q-img-upload-btn" title="إضافة صورة للسؤال">
+          🖼️ ${q.image ? 'تغيير الصورة' : 'إضافة صورة'}
+          <input type="file" accept="image/*" style="display:none"
+            onchange="handleBuilderImageUpload(event,'${containerId}',${qi})"/>
+        </label>
+        <span class="q-img-hint">الصورة ستكون هي السؤال المعروض للطالب</span>
+      </div>
       <div class="choices-builder" id="${containerId}-choices-${qi}">${ch}</div>
       <textarea class="q-note-input" placeholder="ملاحظة المعلم (تظهر للطالب أثناء السؤال إن فعّلتها)..."
         oninput="getBuilderQuestions('${containerId}')[${qi}].note=this.value"
@@ -486,6 +504,34 @@ function builderSetCorrect(cid, qi, ci, checked, isMulti) {
 }
 function deleteBuilderQ(cid, i) {
   const qs=getBuilderQuestions(cid); qs.splice(i,1); renderBuilderTo(qs,cid);
+}
+function handleBuilderImageUpload(event, cid, qi) {
+  const file=event.target.files[0]; if(!file) return;
+  if(file.size>2*1024*1024){ showToast('حجم الصورة يجب أن يكون أقل من 2MB','error'); return; }
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const qs=getBuilderQuestions(cid);
+    qs[qi].image=e.target.result;
+    /* تحديث المعاينة بدون إعادة رسم كاملة */
+    const wrap=document.getElementById(cid+'-imgwrap-'+qi);
+    if(wrap){
+      wrap.style.display='';
+      const img=wrap.querySelector('img');
+      if(img) img.src=e.target.result;
+    }
+    /* تحديث نص زر الرفع */
+    const uploadBtn=wrap?.nextElementSibling?.querySelector('.q-img-upload-btn');
+    if(uploadBtn){ const t=uploadBtn.childNodes[0]; if(t) t.textContent='🖼️ تغيير الصورة'; }
+    showToast('تم إضافة الصورة ✓');
+  };
+  reader.readAsDataURL(file);
+}
+function removeBuilderImage(cid, qi) {
+  const qs=getBuilderQuestions(cid);
+  qs[qi].image='';
+  const wrap=document.getElementById(cid+'-imgwrap-'+qi);
+  if(wrap){ wrap.style.display='none'; const img=wrap.querySelector('img'); if(img) img.src=''; }
+  showToast('تم حذف الصورة');
 }
 
 /* Answer Map */
@@ -525,7 +571,7 @@ async function saveTest() {
       text:q.text, choices:[...q.choices],
       correctAnswers:q.correctAnswers?.length?q.correctAnswers:[q.correct],
       correct:q.correctAnswers?.length?q.correctAnswers[0]:q.correct,
-      multiCorrect:q.multiCorrect||false, note:q.note||''
+      multiCorrect:q.multiCorrect||false, note:q.note||'', image:q.image||''
     })), createdAt:Date.now()
   };
   const btn=$id('save-test-btn');
@@ -545,7 +591,7 @@ async function saveTest() {
 function openEditQuiz(fid) {
   const test=AppState.tests.find(t=>t.firebaseId===fid); if(!test) return;
   AppState.editingQuizId=fid;
-  AppState.editQuestions=test.questions.map(q=>({...q, choices:[...q.choices], correctAnswers:[...(q.correctAnswers||[q.correct||0])]}));
+  AppState.editQuestions=test.questions.map(q=>({...q, choices:[...q.choices], correctAnswers:[...(q.correctAnswers||[q.correct||0])], image:q.image||''}));
   setVal('edit-test-name',    test.name||'');
   setVal('edit-test-subject', test.subject||'');
   setVal('edit-test-time',    test.timeLimit||0);
@@ -553,7 +599,7 @@ function openEditQuiz(fid) {
   openModal('edit-quiz-modal');
 }
 function addEditQuestion() {
-  AppState.editQuestions.push({text:'',choices:['','','',''],correct:0,correctAnswers:[0],multiCorrect:false,note:''});
+  AppState.editQuestions.push({text:'',choices:['','','',''],correct:0,correctAnswers:[0],multiCorrect:false,note:'',image:''});
   renderBuilderTo(AppState.editQuestions,'edit-questions-builder');
 }
 async function saveEditedQuiz() {
@@ -569,7 +615,7 @@ async function saveEditedQuiz() {
       text:q.text, choices:[...q.choices],
       correctAnswers:q.correctAnswers?.length?q.correctAnswers:[q.correct],
       correct:q.correctAnswers?.length?q.correctAnswers[0]:q.correct,
-      multiCorrect:q.multiCorrect||false, note:q.note||''
+      multiCorrect:q.multiCorrect||false, note:q.note||'', image:q.image||''
     })),
     createdAt:oldTest?.createdAt||Date.now(), updatedAt:Date.now()
   };
@@ -798,6 +844,13 @@ function renderQuestion() {
   setText('q-num','السؤال '+(currentQ+1));
   setText('q-text',q.text);
 
+  /* صورة السؤال */
+  const qImgEl=$id('q-image-display');
+  if(qImgEl){
+    if(q.image&&q.image.trim()){ qImgEl.src=q.image; qImgEl.style.display='block'; }
+    else { qImgEl.src=''; qImgEl.style.display='none'; }
+  }
+
   /* ملاحظة المعلم تظهر أعلى الخيارات مباشرة إن وجدت والإعداد مفعّل */
   const notePre=$id('teacher-note-pre');
   if(notePre) {
@@ -979,7 +1032,8 @@ function renderReviewList() {
       if(cls2) ch+=`<div class="review-choice ${cls2}">${isCor?'✅':'❌'} ${letters[ci]||ci+1}. ${escapeHtml(c)}</div>`;
     });
     const noteHtml=q.note?`<div class="review-note"><span>💡 ملاحظة المعلم</span>${escapeHtml(q.note)}</div>`:'';
-    item.innerHTML=`<div class="review-q">${i+1}. ${escapeHtml(q.text)}</div><div class="review-choices">${ch}</div>${noteHtml}`;
+    const imgHtml=q.image?`<img src="${q.image}" class="review-q-image" alt="صورة السؤال"/>`:'';
+    item.innerHTML=`<div class="review-q">${i+1}. ${escapeHtml(q.text)}</div>${imgHtml}<div class="review-choices">${ch}</div>${noteHtml}`;
     frag.appendChild(item);
   });
   rvList.innerHTML=''; rvList.appendChild(frag);
