@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>منصة الوسام التعليمية</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
@@ -103,7 +101,7 @@
 <!-- ==================== الأدوات ==================== -->
 <div id="page-tools" class="page">
   <div style="max-width:900px;margin:0 auto;padding:26px 20px;">
-    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">🛠️ الأدوات</h2>
+    <h2 style="font-family:'ThmanyahSans',sans-serif;font-weight:700;margin-bottom:6px">🛠️ الأدوات</h2>
     <p style="color:var(--text2);font-size:0.88rem;margin-bottom:24px">مؤقتات وأدوات مساعدة لتنظيم وقت الدراسة</p>
     <div class="tools-grid">
       <div class="tool-card">
@@ -148,14 +146,14 @@
 <!-- ==================== الأخطاء ==================== -->
 <div id="page-errors" class="page">
   <div style="max-width:900px;margin:0 auto;padding:26px 20px;">
-    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">🗂️ مجلد الأخطاء</h2>
+    <h2 style="font-family:'ThmanyahSans',sans-serif;font-weight:700;margin-bottom:6px">🗂️ مجلد الأخطاء</h2>
     <p style="color:var(--text2);font-size:0.88rem;margin-bottom:24px">الأسئلة التي أخطأت فيها — مرتبة حسب الصعوبة</p>
     <div id="practice-panel" style="display:none;margin-bottom:20px;">
       <div style="background:var(--glass);backdrop-filter:blur(18px);border:1px solid var(--glass-border);border-radius:var(--radius);padding:18px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-          <div><div style="font-weight:700;font-family:'Cairo',sans-serif;font-size:0.95rem">🔁 جلسات التدريب على الأخطاء</div><div style="font-size:0.78rem;color:var(--text3);margin-top:2px" id="practice-splits-info"></div></div>
+          <div><div style="font-weight:700;font-family:'ThmanyahSans',sans-serif;font-size:0.95rem">🔁 جلسات التدريب على الأخطاء</div><div style="font-size:0.78rem;color:var(--text3);margin-top:2px" id="practice-splits-info"></div></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text2)">عدد الأسئلة/جلسة:<input type="number" id="practice-size" value="10" min="1" max="50" onchange="renderErrors()" style="width:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:5px;text-align:center;font-family:'Cairo',sans-serif;"></div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text2)">عدد الأسئلة/جلسة:<input type="number" id="practice-size" value="10" min="1" max="50" onchange="renderErrors()" style="width:60px;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;color:var(--text);padding:5px;text-align:center;font-family:'ThmanyahSans',sans-serif;"></div>
             <button class="btn btn-primary" onclick="startPracticeSession()" style="font-size:0.82rem;padding:9px 16px">▶ تدريب بالجلسات</button>
             <button class="btn btn-secondary" onclick="startPracticeSession(true)" style="font-size:0.82rem;padding:9px 16px">📋 كل الأخطاء</button>
             <button class="btn btn-secondary" onclick="clearErrors()" style="font-size:0.82rem;padding:9px 16px;color:var(--red)">🗑️ مسح الكل</button>
@@ -251,7 +249,7 @@
 <!-- ==================== لوحة الأدمن ==================== -->
 <div id="page-admin" class="page">
   <div class="admin-page">
-    <h2 style="font-family:'Cairo',sans-serif;font-weight:700;margin-bottom:6px">⚙️ لوحة إدارة الاختبارات</h2>
+    <h2 style="font-family:'ThmanyahSans',sans-serif;font-weight:700;margin-bottom:6px">⚙️ لوحة إدارة الاختبارات</h2>
     <p style="color:var(--accent);font-size:0.82rem;margin-bottom:18px"><i class="fa-solid fa-unlock-keyhole" style="margin-left:5px"></i>وضع الأدمن مفعّل</p>
     <div class="admin-tabs">
       <button class="admin-tab active" onclick="switchAdminTab('add',event)">➕ إضافة اختبار</button>
@@ -360,7 +358,7 @@
   <div class="modal">
     <h3>🗑️ تأكيد الحذف</h3>
     <div class="delete-warning"><strong id="delete-modal-name"></strong>سيتم الحذف نهائياً ولا يمكن التراجع.</div>
-    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('delete-modal')">إلغاء</button><button class="btn" onclick="confirmDeleteTest()" style="background:var(--red);color:#fff;padding:11px 22px;border-radius:11px;font-family:'Cairo',sans-serif;font-weight:700;border:none;cursor:pointer;">حذف نهائياً</button></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeModal('delete-modal')">إلغاء</button><button class="btn" onclick="confirmDeleteTest()" style="background:var(--red);color:#fff;padding:11px 22px;border-radius:11px;font-family:'ThmanyahSans',sans-serif;font-weight:700;border:none;cursor:pointer;">حذف نهائياً</button></div>
   </div>
 </div>
 
